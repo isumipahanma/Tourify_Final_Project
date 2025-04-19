@@ -13,7 +13,8 @@ import {
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, firestore } from '../../firebase/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { Ionicons } from '@expo/vector-icons'; // For icons
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 
 const Register = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -22,10 +23,11 @@ const Register = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const [purpose, setPurpose] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!username || !email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword || !purpose) {
       Alert.alert('Error', 'All fields are required!');
       return;
     }
@@ -38,19 +40,18 @@ const Register = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save user data in Firestore
       await setDoc(doc(firestore, 'users', user.uid), {
         uid: user.uid,
         username: username,
         email: email,
+        purpose: purpose,
       });
 
       Alert.alert('Success', 'Account created successfully!');
-      navigation.navigate('Login'); // Navigate to login after successful registration
+      navigation.navigate('Login');
     } catch (error) {
       Alert.alert('Registration Failed', error.message);
     } finally {
@@ -72,7 +73,7 @@ const Register = ({ navigation }) => {
           <Text style={styles.title}>Create Account</Text>
 
           <View style={styles.inputContainer}>
-            {/* Username Input with Icon */}
+            {/* Username Input */}
             <View style={styles.inputWrapper}>
               <Ionicons name="person-outline" size={20} color="#333" style={styles.icon} />
               <TextInput
@@ -84,7 +85,7 @@ const Register = ({ navigation }) => {
               />
             </View>
 
-            {/* Email Input with Icon */}
+            {/* Email Input */}
             <View style={styles.inputWrapper}>
               <Ionicons name="mail-outline" size={20} color="#333" style={styles.icon} />
               <TextInput
@@ -97,7 +98,22 @@ const Register = ({ navigation }) => {
               />
             </View>
 
-            {/* Password Input with Icon */}
+            {/* Purpose Dropdown */}
+            <View style={styles.pickerWrapper}>
+              <Ionicons name="briefcase-outline" size={20} color="#333" style={styles.icon} />
+              <Picker
+                selectedValue={purpose}
+                onValueChange={(itemValue) => setPurpose(itemValue)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select Purpose" value="" />
+                <Picker.Item label="Travelling" value="travelling" />
+                <Picker.Item label="Hotel Owner" value="hotel owner" />
+                <Picker.Item label="Transport" value="transport" />
+              </Picker>
+            </View>
+
+            {/* Password Input */}
             <View style={styles.passwordContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#333" style={styles.icon} />
               <TextInput
@@ -107,18 +123,12 @@ const Register = ({ navigation }) => {
                 onChangeText={setPassword}
                 secureTextEntry={!passwordVisible}
               />
-              <TouchableOpacity
-                onPress={() => setPasswordVisible(!passwordVisible)}
-              >
-                <Ionicons
-                  name={passwordVisible ? 'eye-off' : 'eye'}
-                  size={24}
-                  color="gray"
-                />
+              <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+                <Ionicons name={passwordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
               </TouchableOpacity>
             </View>
 
-            {/* Confirm Password Input with Icon */}
+            {/* Confirm Password Input */}
             <View style={styles.passwordContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#333" style={styles.icon} />
               <TextInput
@@ -128,14 +138,8 @@ const Register = ({ navigation }) => {
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!confirmPasswordVisible}
               />
-              <TouchableOpacity
-                onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)}
-              >
-                <Ionicons
-                  name={confirmPasswordVisible ? 'eye-off' : 'eye'}
-                  size={24}
-                  color="gray"
-                />
+              <TouchableOpacity onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)}>
+                <Ionicons name={confirmPasswordVisible ? 'eye-off' : 'eye'} size={24} color="gray" />
               </TouchableOpacity>
             </View>
           </View>
@@ -202,6 +206,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     fontSize: 16,
+  },
+  pickerWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+  },
+  picker: {
+    flex: 1,
+    height: 50,
+    color: '#333',
   },
   passwordContainer: {
     flexDirection: 'row',

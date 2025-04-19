@@ -193,7 +193,7 @@ const HotelDetail = ({ route, navigation }) => {
       Alert.alert("Error", "Please sign in to make a booking");
       return;
     }
-
+  
     try {
       const bookingData = {
         userId: user.uid,
@@ -208,11 +208,12 @@ const HotelDetail = ({ route, navigation }) => {
         totalPrice: totalPrice * 1.1,
         bookingDate: new Date().toISOString(),
         status: 'confirmed',
+        addedBy: hotel.addedBy, // Add the addedBy field from the hotel
       };
-
+  
       const bookingRef = doc(collection(firestore, 'bookings'));
       await setDoc(bookingRef, bookingData);
-
+  
       const hotelRef = doc(firestore, 'hotels', hotelId);
       const updatedRoomTypes = hotel.roomTypes.map(room => {
         if (room.name === selectedRoomType.name) {
@@ -221,7 +222,7 @@ const HotelDetail = ({ route, navigation }) => {
         return room;
       });
       await setDoc(hotelRef, { roomTypes: updatedRoomTypes }, { merge: true });
-
+  
       Alert.alert(
         "Booking Confirmed!",
         `Your ${selectedRoomType.name} has been booked at ${hotel.name} from ${formatDate(checkInDate)} to ${formatDate(checkOutDate)} for $${(totalPrice * 1.1).toFixed(2)}.\nBooking ID: ${bookingRef.id}`,
@@ -239,6 +240,9 @@ const HotelDetail = ({ route, navigation }) => {
       Alert.alert("Error", "Failed to save booking. Please try again.");
     }
   };
+      
+
+     
 
   const formatDate = (dateString) => {
     if (!dateString) return '';

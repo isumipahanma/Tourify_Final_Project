@@ -17,6 +17,8 @@ import HotelDetail from './src/screen/HotelDetail';
 import DestinationDetail from './src/screen/DestinationDetail';
 import AddHotelScreen from './src/screen/AddHotelScreen';
 import AddRestaurantScreen from './src/screen/AddRestaurantScreen';
+import Profile from './src/screen/profile';
+import Notifications from './src/screen/Notification';
 
 /*
 
@@ -57,6 +59,8 @@ export default function App() {
           <Stack.Screen name='DestinationDetail' component={DestinationDetail}/>
           <Stack.Screen name="AddHotelScreen" component={AddHotelScreen}/>
           <Stack.Screen name="AddRestaurantScreen" component={AddRestaurantScreen}/>
+          <Stack.Screen name="Profile" component={Profile}/>
+          <Stack.Screen name="Notifications" component={Notifications}/>
           
          
           

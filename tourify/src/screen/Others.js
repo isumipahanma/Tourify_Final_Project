@@ -360,6 +360,18 @@ const Others = () => {
           <Ionicons name="map-outline" size={30} color="#007bff" />
           <Text style={styles.optionText}>Find Local Guides</Text>
         </TouchableOpacity>
+        
+        {/* View Profile */}
+        <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person-outline" size={30} color="#007bff" />
+          <Text style={styles.optionText}>View Profile</Text>
+        </TouchableOpacity>
+        
+        {/* View Notifications */}
+        <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate('Notifications')}>
+          <Ionicons name="notifications-outline" size={30} color="#007bff" />
+          <Text style={styles.optionText}>Notifications</Text>
+        </TouchableOpacity>
       </View>
       
       {/* Featured Places */}
@@ -375,6 +387,8 @@ const Others = () => {
         <View style={styles.ratingsHeader}>
           <Text style={styles.sectionTitle}>Ratings & Reviews</Text>
           <TouchableOpacity 
+
+
             style={styles.rateButton}
             onPress={() => setRatingModalVisible(true)}
           >
@@ -618,6 +632,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginVertical: 20,
+    flexWrap: 'wrap',
   },
   optionCard: {
     backgroundColor: '#fff',
@@ -629,6 +644,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 3,
+    marginBottom: 10,
   },
   optionText: {
     fontSize: 12,

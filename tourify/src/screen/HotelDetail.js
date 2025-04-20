@@ -13,9 +13,10 @@ import {
   Linking,
   Alert,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { firestore, auth } from '../../firebase/firebase';
-import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { Hotel } from '../../utils/HotelClass';
 import { Calendar } from 'react-native-calendars';
@@ -38,6 +39,10 @@ const HotelDetail = ({ route, navigation }) => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [bookingStep, setBookingStep] = useState(1);
   const [user, setUser] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [newReviewRating, setNewReviewRating] = useState(0);
+  const [newReviewComment, setNewReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -68,7 +73,21 @@ const HotelDetail = ({ route, navigation }) => {
       }
     };
 
+    const fetchReviews = async () => {
+      try {
+        const reviewsRef = collection(firestore, 'hotelReviews');
+        const querySnapshot = await getDocs(reviewsRef);
+        const reviewsData = querySnapshot.docs
+          .filter(doc => doc.data().hotelId === hotelId)
+          .map(doc => ({ id: doc.id, ...doc.data() }));
+        setReviews(reviewsData);
+      } catch (err) {
+        console.error('Error fetching reviews:', err);
+      }
+    };
+
     fetchHotelDetails();
+    fetchReviews();
   }, [hotelId]);
 
   const calculateNights = () => {
@@ -207,8 +226,8 @@ const HotelDetail = ({ route, navigation }) => {
         pricePerNight: parseFloat(selectedRoomType.price),
         totalPrice: totalPrice * 1.1,
         bookingDate: new Date().toISOString(),
-        status: 'confirmed',
-        addedBy: hotel.addedBy, // Add the addedBy field from the hotel
+        status: 'pending',
+        addedBy: hotel.addedBy,
       };
   
       const bookingRef = doc(collection(firestore, 'bookings'));
@@ -240,9 +259,54 @@ const HotelDetail = ({ route, navigation }) => {
       Alert.alert("Error", "Failed to save booking. Please try again.");
     }
   };
-      
 
-     
+  const handleSubmitReview = async () => {
+    if (!user) {
+      Alert.alert("Please Sign In", "You need to be signed in to submit a review.");
+      return;
+    }
+
+    if (newReviewRating === 0) {
+      Alert.alert("Rating Required", "Please select a star rating.");
+      return;
+    }
+
+    if (!newReviewComment.trim()) {
+      Alert.alert("Comment Required", "Please enter a comment.");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      // Fetch username from users collection
+      let userName = 'Anonymous';
+      const userRef = doc(firestore, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        userName = userSnap.data().username || 'Anonymous';
+      }
+
+      const reviewData = {
+        userId: user.uid,
+        hotelId: hotelId,
+        rating: newReviewRating,
+        comment: newReviewComment,
+        timestamp: new Date().toISOString(),
+        userName: userName,
+      };
+
+      const reviewRef = await addDoc(collection(firestore, 'hotelReviews'), reviewData);
+      setReviews([...reviews, { id: reviewRef.id, ...reviewData }]);
+      setNewReviewRating(0);
+      setNewReviewComment('');
+      Alert.alert("Success", "Your review has been submitted!");
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      Alert.alert("Error", "Failed to submit review. Please try again.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -576,6 +640,26 @@ const HotelDetail = ({ route, navigation }) => {
     </View>
   );
 
+  const renderReviewItem = ({ item }) => (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewHeader}>
+        <Text style={styles.reviewUserName}>{item.userName}</Text>
+        <View style={styles.reviewStars}>
+          {[...Array(5)].map((_, index) => (
+            <Ionicons
+              key={index}
+              name={index < item.rating ? 'star' : 'star-outline'}
+              size={16}
+              color="#FFD700"
+            />
+          ))}
+        </View>
+      </View>
+      <Text style={styles.reviewComment}>{item.comment}</Text>
+      <Text style={styles.reviewDate}>{formatDate(item.timestamp)}</Text>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -710,6 +794,55 @@ const HotelDetail = ({ route, navigation }) => {
               <Text style={styles.noDataText}>No amenities listed</Text>
             )}
           </View>
+        </View>
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Guest Reviews</Text>
+          <View style={styles.reviewSubmissionContainer}>
+            <Text style={styles.reviewSubmissionTitle}>Leave a Review</Text>
+            <View style={styles.starRatingContainer}>
+              {[...Array(5)].map((_, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setNewReviewRating(index + 1)}
+                >
+                  <Ionicons
+                    name={index < newReviewRating ? 'star' : 'star-outline'}
+                    size={24}
+                    color="#FFD700"
+                    style={styles.starIcon}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="Write your review here..."
+              multiline
+              numberOfLines={4}
+              value={newReviewComment}
+              onChangeText={setNewReviewComment}
+            />
+            <TouchableOpacity
+              style={[styles.submitReviewButton, submittingReview && styles.disabledButton]}
+              onPress={handleSubmitReview}
+              disabled={submittingReview}
+            >
+              <Text style={styles.submitReviewButtonText}>
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {reviews.length > 0 ? (
+            <FlatList
+              data={reviews}
+              renderItem={renderReviewItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+            />
+          ) : (
+            <Text style={styles.noDataText}>No reviews yet. Be the first to leave one!</Text>
+          )}
         </View>
 
         <View style={styles.sectionContainer}>
@@ -1362,7 +1495,81 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     lineHeight: 20,
-  }
+  },
+  reviewSubmissionContainer: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  reviewSubmissionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  starRatingContainer: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  starIcon: {
+    marginRight: 8,
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 12,
+    textAlignVertical: 'top',
+  },
+  submitReviewButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitReviewButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  reviewCard: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  reviewStars: {
+    flexDirection: 'row',
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'right',
+  },
 });
 
 export default HotelDetail;
